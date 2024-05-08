@@ -1,0 +1,400 @@
+\chapter{Experiments and results}\label{sec:experiments}
+In this chapter we analyze all the experiments we performed to find the presence of coronary calcium on CXRs, exploiting knowledge distillation from models pre-trained on CTs.
+
+After a short introduction on metrics used to evaluate performance of the models, results of the teacher networks trained on CT scans are presented in section \ref{sec:experiments_ct}.
+Then, we first present results obtained both training a \emph{SimpleCXR} network and a model based on \cite{iodice_2022} using CXRs only; results of these experiments are used for comparison with those performed using KD as regularization term, presented in sections \ref{sec:experiments_resp_kd} and \ref{sec:experiments_feat_kd}.
+In the last section we analyze experiments performed by mixing two different approaches together: KD and transfer learning.
+
+
+\section{Evaluation metrics}
+
+All the metrics used in this work are based on statistical analysis measures calculated on the balancing between the four possible outcomes of the binary classifications, that are:
+\begin{enumerate}
+    \item \textbf{True positives (TP):} positive examples that are classified correctly.
+    \item \textbf{True negatives (TN):} negative examples that are classified correctly.
+    \item \textbf{False positives (FP):} negative examples that are incorrectly classified as positive.
+    \item \textbf{False negatives (FN):} positive examples that are incorrectly classified as negative.
+\end{enumerate}
+
+These four possible classification results are often represented in a confusion matrix, depicted on table \ref{tab:confusion_matrix}.
+
+\begin{table}
+    \centering
+    \begin{tabular}{l|l|c|c|c}
+        \multicolumn{2}{c}{}&\multicolumn{2}{c}{Predicted} & \hspace{2.5em} \\
+        \cline{3-4}
+        \multicolumn{2}{c|}{}& Positive & Negative & \\
+        \cline{2-4}
+        \multirow{2}{*}{Actual}& Positive & TP & FN & \\
+        \cline{2-4}
+        & Negative & FP & TN & \\
+        \cline{2-4}
+    \end{tabular}
+    \caption{Example structure of a confusion matrix, where obtained results are put in place of the acronyms}
+    \label{tab:confusion_matrix}
+\end{table}
+
+For analysis of results we use the following metrics:
+\begin{itemize}
+    \item \textbf{Accuracy:} is the first simple metric that can be calculated using the results of classification; it is the measure of the ratio between correct predictions and the total number of predictions performed.
+    This metric is largely used, but is not well suited for datasets where class distribution is not balanced, in this case a model that always predict the majority class could achieve high accuracy but be of no use for real application.
+    Our dataset is imbalanced with more than 60\% of patients in the positives class, for this reason an alternative metric would be more advisable.
+    \item \textbf{Balanced Accuracy (BA):} is a metric that address the problem of unbalanced datasets, requiring that the model performs good classification on all classes.
+    The BA is calculated averaging the accuracy for each class.
+    In the binary classification problem this is reduced to the average between the true positive rate (TPR), or \emph{Sensitivity} and the true negative rate (TNR), or \emph{Specificity}.
+    \item \textbf{Sensitivity:} represents the number of positives correctly classified over the total number of positives.
+    It is a fundamental metric for medical diagnosis since the ability to detect a disease whenever it is present, i.e. minimize false negatives, is often considered the most important feature of a model.
+    A false negative could in fact be very dangerous, leading to ignoring a disease, preventing the possibility to promptly react with a specific therapy on time.
+    \item \textbf{Specificity:} represents the number of negative patients that are correctly classified over the total number of negatives.
+    It is also important in order to have a reliable model, but less than \emph{Sensitivity}; indeed, the impact of a false positive is less harmful and can be generally resolved with further analysis.
+\end{itemize}
+
+A summary of metrics used in this work and their formulas are listed in table \ref{tab:metrics}.
+
+\begin{table}
+    \centering
+    \begin{tabular}{|@{\hspace{2em}}c@{\hspace{2em}}|@{\hspace{2em}}c@{\hspace{2em}}|}
+        \hline
+        & \\[-0.5ex]
+        \textbf{Metric} & \textbf{Formula} \\[1.2ex]
+        \hline
+        & \\[-1.5ex]
+        Accuracy & $\frac{TP+TN}{TP+TN+FP+FN}$ \\[1ex]
+        \hline
+        & \\[-1.5ex]
+        Sensitivity & $\frac{TP}{TP+FN}$ \\[1ex]
+        \hline
+        & \\[-1.5ex]
+        Specificity & $\frac{TN}{TN+FP}$ \\[1ex]
+        \hline
+        & \\[-1.5ex]
+        Balanced Accuracy & $\frac{Sensitivity+Specificity}{2}$ \\[1ex]
+        \hline
+    \end{tabular}
+    \caption{Metrics used for models performance evaluation, with the corresponding formulas.}
+    \label{tab:metrics}
+\end{table}
+
+
+\section{Experiments on CT}\label{sec:experiments_ct}
+
+We trained two different models on CT scans: \emph{SimpleCT}, a simple and small convolutional network, and \emph{RetinaCT}, a deeper network pre-trained on LUNA16 \cite{luna16} dataset; both are intended to be used as teachers of the KD experiments performed on CXRs.
+Their different structures has been described in detail in section \ref{sec:detecting_calcium_on_ct}.
+
+For \emph{SimpleCT} model we fixed some hyper-parameters with the following values:
+\begin{itemize}
+    \item \emph{epochs}: 100
+    \item \emph{batch size}: 4
+    \item \emph{learning rate}: 0.01
+    \item \emph{learning rate decay}: halves value every 20 epochs
+    \item \emph{loss}: Cross-Entropy
+\end{itemize}
+Then we tested two different classifiers, with 3 and 1 fully connected layers respectively; furthermore we also tried to add an l2-regularization with a weight that, when applied, is set to $10^{-4}$.
+We got similar results for all experiments performed, with accuracy in range 0.88 to 0.90 and BA in range 0.88 to 0.91.
+Results of the most meaningful experiments are synthesized in table \ref{tab:ct_results}, from now, in this section, all numbers in brackets refer to this table.
+Best results are for experiments (2) and (3) : the former used the 3-layer classifier and l2-regularization achieving a extremely high sensitivity; the latter used the single layer classifier, without l2-regularization and achieved a good balance between results on the two different classes, and consequently the best BA.
+
+\begin{table}
+    \centering
+    \begin{tabular}{|rl|c|c|c|c|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Experiment}} & \textbf{Acc.} & \textbf{BA} & \textbf{Sens.} & \textbf{Spec.} \\
+        \hline
+        \multirow{4}{*}{\textbf{SimpleCT}}
+        & (1) 3-layer class.           & 0.89          & 0.88          & 0.94          & 0.81 \\
+        & (2) 3-layer class. + l2-reg. & \textbf{0.90} & 0.88          & \textbf{1.00} & 0.75 \\
+        & (3) 1-layer class.           & \textbf{0.90} & \textbf{0.91} & 0.90          & \textbf{0.91} \\
+        & (4) 1-layer class. + l2-reg. & 0.88          & 0.87          & 0.90          & 0.84 \\
+        \hline
+        \multirow{4}{*}{\textbf{RetinaCT}}
+        & (5) 2-layer class.                   & 0.81          & 0.81          & 0.79          & 0.84 \\
+        & (6) 2-layer class. + freeze          & 0.83          & 0.86          & 0.75          & \textbf{0.97} \\
+        & (7) 3-layer class. + freeze          & 0.89          & 0.88          & 0.92          & 0.84 \\
+        & (8) 3-layer class. + freeze + l2-reg & \textbf{0.92} & \textbf{0.91} & \textbf{1.00} & 0.81 \\
+        \hline
+    \end{tabular}
+    \caption{Results of experiments on CT scans}
+    \label{tab:ct_results}
+\end{table}
+
+Similarly, for \emph{RetinaCT} model, we used the same hyper-parameters, changing only the number of epochs to 200.
+Then we tested different number of layers for the fully-connected classifier, achieving the best results with 3-layers, and we introduced again l2-regularization with the same value used for previous experiments.
+In addition, since we performed transfer learning on \emph{RetinaCT} because it is pre-trained, we found really effective freezing all the layers of the encoder except the last one; this choice allows us to leverage the good feature extractor of RetinaNet \cite{lin2017focal} trained on LUNA16 \cite{luna16}, ensuring at the same time enough flexibility to the model to learn the CAC classification task.
+The overall best result was achieved in experiment (8) using the 3-layer classifier, l2-regularization and freezing of the encoder, reaching both the highest accuracy and BA.
+
+Sensitivity of 1.0 for experiments (2) and (8) means that all positives has been correctly classified and errors are all in classification of negative patients, stressing the bias towards positive class that is more represented in our dataset.
+A possible improvement to achieve higher values of specificity could be to use a weighted loss; anyway a model slightly biased towards sensitivity is preferable to minimize dangerous false negatives.
+
+These experiments show that a very simple approach to the CAC classification problem on CT scans allows to achieve better results than all known experiments on CXRs, supporting the hypothesis that CAC classification is an hard task to be performed on CXRs, while it is manageable on CT modality.
+
+Trying to exploit the knowledge acquired by \emph{SimpleCT} and \emph{RetinaCT}, models trained from experiments (2), (3) and (8) have been selected to be used as teachers for the KD experiments that will be described in the following sections.
+
+
+\section{Experiments on CXR}\label{sec:experiments_cxr}
+
+For the experiments on CXRs, we first trained \emph{SimpleCXR} model from scratch using CXR images only, results of these experiments are used as baseline for fair comparison with those obtained using KD.
+We also trained a DenseNet using method from \cite{iodice_2022}, that is on our knowledge the method that achieved the best results on the CAC classification task from CXRs; this model is used as our target reference.
+After that,  we introduce experiments using KD aiming to improve performance of aforementioned models.
+
+
+\subsection{Reference experiments using only CXR}
+
+Results of the experiments performed using only CXRs as input are summarized in table \ref{tab:cxr_baseline_results}.
+
+\begin{table}
+    \centering
+    \begin{tabular}{|rl|c|c|c|c|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Experiment}} & \textbf{Acc.} & \textbf{BA} & \textbf{Sens.} & \textbf{Spec.} \\
+        \hline
+        \textbf{SimpleCXR} & (9) from scratch               & 0.67          & 0.61          & 0.84          & 0.38          \\
+        \hline
+        \textbf{DenseNet}  & (10) method \cite{iodice_2022} & \textbf{0.78} & \textbf{0.72} & \textbf{0.92} & \textbf{0.52} \\
+        \hline
+    \end{tabular}
+    \caption{Results of reference experiments on CXRs}
+    \label{tab:cxr_baseline_results}
+\end{table}
+
+\emph{SimpleCXR} has really poor performance with an accuracy that is only slightly better than a completely blind model that predicts always positive class, that would achieve 0.64\% of accuracy on our test set.
+The confusion matrix in table \ref{tab:confusion_matrix_simple_cxr} shows that most errors are on classification of negative samples.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{l|l|c|c|c}
+        \multicolumn{2}{c}{}&\multicolumn{2}{c}{Predicted} & \hspace{2.5em} \\
+        \cline{3-4}
+        \multicolumn{2}{c|}{}& Positive & Negative & \\
+        \cline{2-4}
+        \multirow{2}{*}{Actual}& Positive & 105 & 20 & \\
+        \cline{2-4}
+        & Negative & 44 & 27 & \\
+        \cline{2-4}
+    \end{tabular}
+    \caption{Confusion matrix of experiment (9) from table \ref{tab:cxr_baseline_results}.}
+    \label{tab:confusion_matrix_simple_cxr}
+\end{table}
+
+Model based on \cite{iodice_2022} gets better results, but still struggle to classify negative patients. Its confusion matrix can be seen in table \ref{tab:confusion_matrix_iodice}.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{l|l|c|c|c}
+        \multicolumn{2}{c}{}&\multicolumn{2}{c}{Predicted} & \hspace{2.5em} \\
+        \cline{3-4}
+        \multicolumn{2}{c|}{}& Positive & Negative & \\
+        \cline{2-4}
+        \multirow{2}{*}{Actual}& Positive & 115 & 10 & \\
+        \cline{2-4}
+        & Negative & 34 & 37 & \\
+        \cline{2-4}
+    \end{tabular}
+    \caption{Confusion matrix of experiment (10) from table \ref{tab:cxr_baseline_results}.}
+    \label{tab:confusion_matrix_iodice}
+\end{table}
+
+Results of both models reveal significantly lower performance than those obtained on CTs.
+Lower results were expected and they represent further confirmation that detect coronary calcium lesions on CXRs is inherently harder than performing the same task on CT scans.
+In particular, we observed very low values of specificity suggesting that both models trained on experiments (9) and (10) are heavily biased towards the positive class.
+
+
+\subsection{Experiments using response-based KD}\label{sec:experiments_resp_kd}
+
+In order to have a clear and comprehensive picture, we performed many experiments using response-based KD, training the same \emph{SimpleCXR} model with different teachers and configurations.
+Some hyper-parameters have been fixed to the following values:
+\begin{itemize}
+    \item \emph{epochs}: 200;
+    \item \emph{batch size}: 4;
+    \item \emph{learning rate}: 0.005;
+    \item \emph{learning rate decay}: halves value every 30 epochs;
+    \item \emph{KD loss}: Kullback-Leibler divergence;
+    \item \emph{Hard-targets loss}: Cross-Entropy;
+\end{itemize}
+\emph{SimpleCT} models trained from experiments (2) and (3) and \emph{RetinaCT} model trained from (8) are used as teachers.
+
+We tried multiple values of $\alpha$ to balance  contributes of KD and hard-targets losses, combined as formulated in \ref{eqn:kd_loss}: $\alpha=0.1$ that means the KD loss is contributing for 90\% of the total, $\alpha=0.5$ where both losses have same weight, and $\alpha=0.9$ where KD has only a 10\% importance.
+
+Furthermore, different values of the temperature $T$ have been used for softmax function \ref{eqn:softmax}.
+An higher value of $T$ means that probabilities generated from logits are softened, simulating a more uncertain teacher.
+
+We applied l2-regularization on experiments using (2) and (8) as teachers with a value of $10^{-5}$ and $10^{-4}$, respectively.
+However, it's application in combination with teacher (3) completely inhibit training progression even with small values, so we decided to remove the regularization in this case.
+
+Table \ref{tab:cxr_response_based_kd} depicts results obtained with configurations described above.
+
+\begin{table}
+    \centering
+    \begin{tabular}{c|lll|c|c|c|c|c|}
+        \hhline{~--------}
+        & \multicolumn{3}{|c|}{\textbf{Experiment}} & \textbf{Teacher} & \textbf{Acc.} & \textbf{BA} & \textbf{Sens.} & \textbf{Spec.} \\
+        \hhline{~========}
+        & (11) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(2)} &         0.68  & \textbf{0.64} &         0.78  &         0.49  \\
+        & (12) & $\alpha=0.5$ & $T=1$  &                      &         0.64  &         0.61  &         0.70  & \textbf{0.52} \\
+        & (13) & $\alpha=0.9$ & $T=1$  &                      &         0.64  &         0.60  &         0.77  &         0.42  \\
+        & (14) & $\alpha=0.1$ & $T=2$  &                      &         0.63  &         0.56  &         0.82  &         0.31  \\
+        & (15) & $\alpha=0.1$ & $T=5$  &                      &         0.67  &         0.58  &         0.89  &         0.28  \\
+        & (16) & $\alpha=0.1$ & $T=10$ &                      & \textbf{0.70} &         0.61  & \textbf{0.95} &         0.27  \\
+        \hhline{~--------}
+        & (17) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(3)} &         0.64  & \textbf{0.63} &         0.69  & \textbf{0.56} \\
+        & (18) & $\alpha=0.5$ & $T=1$  &                      &         0.60  &         0.58  &         0.67  &         0.48  \\
+        & (19) & $\alpha=0.9$ & $T=1$  &                      &         0.61  &         0.60  &         0.64  & \textbf{0.56} \\
+        & (20) & $\alpha=0.1$ & $T=2$  &                      &         0.60  &         0.57  &         0.68  &         0.46  \\
+        & (21) & $\alpha=0.1$ & $T=5$  &                      & \textbf{0.65} &         0.61  &         0.77  &         0.45  \\
+        & (22) & $\alpha=0.1$ & $T=10$ &                      &         0.62  &         0.56  & \textbf{0.78} &         0.34  \\
+        \hhline{~--------}
+        & (23) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(8)} &         0.65  &         0.57  &         0.86  &         0.28  \\
+        & (24) & $\alpha=0.5$ & $T=1$  &                      & \textbf{0.72} & \textbf{0.64} &         0.93  &         0.35  \\
+        & (25) & $\alpha=0.9$ & $T=1$  &                      &         0.67  &         0.63  &         0.76  & \textbf{0.51} \\
+        & (26) & $\alpha=0.1$ & $T=2$  &                      &         0.65  &         0.59  &         0.80  &         0.38  \\
+        & (27) & $\alpha=0.1$ & $T=5$  &                      &         0.66  &         0.59  &         0.85  &         0.34  \\
+        & (28) & $\alpha=0.1$ & $T=10$ &                      &         0.71  &         0.61  & \textbf{0.97} &         0.25  \\
+        \hhline{~--------}
+        \multicolumn{8}{c}{} \\
+        \hhline{~--------}
+        \multirow{2}{*}{}
+        & (9)  & \multicolumn{2}{l|}{from scratch}              &                      \cellcolor{gray!25} &         0.67  &         0.61  &         0.84  &         0.38  \\
+        & (10) & \multicolumn{2}{l|}{method \cite{iodice_2022}} & \multirow{-2}{*}{N/A}\cellcolor{gray!25} & \textbf{0.78} & \textbf{0.72} & \textbf{0.92} & \textbf{0.52} \\
+        \hhline{~--------}
+    \end{tabular}
+    \caption{Results of experiments performed with SimpleCXR trained using response-based KD. Results of reference experiments are reported at bottom for convenience.}
+    \label{tab:cxr_response_based_kd}
+\end{table}
+
+The best result obtained in this group of experiments is with experiment (24) using (8) as teacher, $\alpha=0.5$ and $T=1$, with an accuracy of 0.72 and BA of 0.64.
+Comparing (24) with our baseline model (9) naively trained from scratch, we can see results on all metrics are slightly improved except specificity.
+These results show that response-based KD with properly tuned parameters can be effective to improve performance in comparison with training from scratch.
+None of these experiments reach or get close to the performance of our best reference (10).
+
+According to our experiments, we did not find any meaningful pattern when changing both $\alpha$ and $T$ terms; this seems to show that there is not a clear correlation with these two parameters and the transfer of information between teacher and student model.
+However, we can notice from the results that some of the characteristics of the teachers are transferred to the students; for example usage of (3) as teacher provide the best improvements in specificity, it is, indeed, the teacher with the best value of specificity of those selected for the KD experiments, while (2) and (8) having a sensitivity of 1.0 mainly help to improve that metric.
+
+Classification of negative samples is confirmed to be the hardest feature to learn for the models, with low values of specificity in general, as it was, to a lesser extent, for classification on CT scans, probably due to dataset imbalance.
+
+
+\subsection{Experiments using feature-based KD}\label{sec:experiments_feat_kd}
+
+Since improvements using response-based KD were not satisfactory enough, we performed some experiments using feature-based KD, as described in section \ref{sec:training_on_cxr}.
+Response-based KD turns out to be more effective when helps the student to find hidden relationships between different classes, and its effectiveness is partially limited in binary classification since only two classes are available.
+It is possible that response-based approach is not enough to transfer the complex knowledge learned by the teacher that is mainly determined by the quality of its features, transfer such features could be a better approach to improve the performance.
+
+The same hyper-parameters used for response-based experiments are maintained, as introduced on section \ref{sec:experiments_resp_kd}, except for the KD loss that is replaced by MSE as formulated in \ref{eqn:mse}, since Kullback-Leibler divergence is only applicable on probability distributions, whereas we are now forcing the student to mimic an internal feature map of the teacher.
+For the same reason the temperature term $T$ is no longer used since application of softmax function would not make sense.
+
+We split experiments in two groups based on the layer chosen for the distillation; the former uses the output of the encoders of teachers and students, after the adaptive average pooling layer, that are all composed by 512-features, whereas the latter uses the second layer of the teacher classifier composed of 32 features and a projection branch of the student, as described in section \ref{sec:training_on_cxr}. In the last case the teacher (3) cannot be used since its classifier is composed by a single layer.
+
+For the KD loss contribute, we tested the same values of $\alpha$ used in previous group of experiments, i.e. 0.1, 0.5 and 0.9.
+L2-regularization has been applied with a value of $10^{-4}$ for all the experiment except those involving model (3) as teacher, since its application inhibit completely training as it was for the response-based experiments using the same teacher; we can assume that, since the model (3) itself was trained without l2-regularization, its features might have large values that conflict with regularization constraint.
+We observed, in some experiments, that values produced by MSE were quite small, some orders of magnitude lower than the binary cross entropy loss for the classification task; to balance this, the distillation loss is multiplied for a factor of 100 for experiments using teachers (2) and (8) with KD on encoder output, and by a factor of 10 for all experiments using the separate branch.
+Experiments using (3) as teacher do not suffer of small loss values, probably for the missing l2-regularization not limiting magnitude of weights.
+All results are presented in table \ref{tab:cxr_feature_based_kd}.
+
+\begin{table}
+    \begin{tabular}{c|ll|c|c|c|c|c|}
+        \hhline{~-------}
+        & \multicolumn{2}{|c|}{\textbf{Experiment}} & \textbf{Teacher} & \textbf{Acc.} & \textbf{BA} & \textbf{Sens.} & \textbf{Spec.} \\
+        \hhline{~=======}
+        \multirow{9}{*}{\begin{minipage}{2cm}\centering KD \\ on encoder output\end{minipage}}
+        & (29) & $\alpha=0.1$ & \multirow{3}{*}{(2)} &         0.66  &         0.60  & \textbf{0.82} &         0.38  \\
+        & (30) & $\alpha=0.5$ &                      &         0.64  &         0.64  &         0.66  &         0.62  \\
+        & (31) & $\alpha=0.9$ &                      &         0.63  &         0.61  &         0.68  &         0.54  \\
+        \hhline{~-------}
+        & (32) & $\alpha=0.1$ & \multirow{3}{*}{(3)} &         0.66  &         0.65  &         0.70  &         0.59  \\
+        & (33) & $\alpha=0.5$ &                      &         0.61  &         0.62  &         0.59  & \textbf{0.65} \\
+        & (34) & $\alpha=0.9$ &                      & \textbf{0.68} & \textbf{0.66} &         0.75  &         0.56  \\
+        \hhline{~-------}
+        & (35) & $\alpha=0.1$ & \multirow{3}{*}{(8)} &         0.66  &         0.64  &         0.70  &         0.58  \\
+        & (36) & $\alpha=0.5$ &                      & \textbf{0.68} & \textbf{0.66} &         0.75  &         0.56  \\
+        & (37) & $\alpha=0.9$ &                      &         0.63  &         0.61  &         0.70  &         0.52  \\
+        \hhline{~=======}
+        \multirow{6}{*}{\begin{minipage}{2cm}\centering KD \\ on separate branch\end{minipage}}
+        & (38) & $\alpha=0.1$ & \multirow{3}{*}{(2)} & \textbf{0.69} & \textbf{0.66} &         0.75  & \textbf{0.58} \\
+        & (39) & $\alpha=0.5$ &                      & \textbf{0.69} &         0.64  & \textbf{0.85} &         0.42  \\
+        & (40) & $\alpha=0.9$ &                      &         0.68  & \textbf{0.66} &         0.74  & \textbf{0.58} \\
+        \hhline{~-------}
+        & (41) & $\alpha=0.1$ & \multirow{3}{*}{(8)} &         0.67  &         0.62  &         0.80  &         0.44  \\
+        & (42) & $\alpha=0.5$ &                      &         0.65  &         0.62  &         0.75  &         0.48  \\
+        & (43) & $\alpha=0.9$ &                      &         0.67  &         0.61  &         0.83  &         0.39  \\
+        \hhline{~-------}
+        \multicolumn{8}{c}{} \\
+        \hhline{~-------}
+        \multirow{2}{*}{}
+        & (9)  & from scratch              &                      \cellcolor{gray!25} &         0.67  &         0.61  &         0.84  &         0.38  \\
+        & (10) & method \cite{iodice_2022} & \multirow{-2}{*}{N/A}\cellcolor{gray!25} & \textbf{0.78} & \textbf{0.72} & \textbf{0.92} & \textbf{0.52} \\
+        \hhline{~-------}
+    \end{tabular}
+    \caption{Results of experiments performed with SimpleCXR trained using feature-based KD. Results of reference experiments are reported at bottom for convenience.}
+    \label{tab:cxr_feature_based_kd}
+\end{table}
+
+Best results are achieved using KD on a separate branch with teacher (2).
+In particular, experiment (39) surpass our baseline (9) in all metrics considered, but again no results get close to our best reference.
+Possibly, the complexity of the task is too high to be captured by our model even with the help of teacher knowledge.
+We can observe an improvement of specificity in most of the experiments, but with an equally widespread drop of performance in terms of sensitivity.
+The best specificity result is obtained using teacher (3) as it was for response-based experiments, confirming that the teacher used affect training transferring its characteristics to the student and that model (3) is effective to improve specificity.
+
+
+\subsection{Experiments using response-based KD and transfer learning}
+
+In this section we present performance on CAC classification obtained using a combination of transfer learning and KD.
+We replicated the same approach of \cite{iodice_2022} as in baseline experiment (10), starting from a DenseNet pretrained on CheXpert and using the same method, but we added a KD term to the loss.
+
+Hyper-parameters used are:
+\begin{itemize}
+    \item \emph{epochs}: 50
+    \item \emph{batch size}: 4
+    \item \emph{learning rate}: 0.003
+    \item \emph{learning rate decay}: multiply by 0.1 at steps 20 and 35
+    \item \emph{l2-regularization}: $10^{-4}$
+    \item \emph{KD loss}: Kullback-Leibler divergence
+    \item \emph{Hard-targets loss}: Cross-Entropy
+\end{itemize}
+Results are visible in table \ref{tab:cxr_response_based_kd_and_transfer_learning}.
+
+\begin{table}
+    \centering
+    \begin{tabular}{c|lll|c|c|c|c|c|}
+        \hhline{~--------}
+        & \multicolumn{3}{|c|}{\textbf{Experiment}} & \textbf{Teacher} & \textbf{Acc.} & \textbf{BA} & \textbf{Sens.} & \textbf{Spec.} \\
+        \hhline{~========}
+        & (44) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(2)} &         0.74  &         0.70  &         0.87  &         0.52  \\
+        & (45) & $\alpha=0.5$ & $T=1$  &                      & \textbf{0.77} &         0.70  & \textbf{0.94} &         0.46  \\
+        & (46) & $\alpha=0.9$ & $T=1$  &                      &         0.73  & \textbf{0.71} &         0.79  & \textbf{0.63} \\
+        & (47) & $\alpha=0.1$ & $T=2$  &                      &         0.73  &         0.68  &         0.87  &         0.49  \\
+        & (48) & $\alpha=0.1$ & $T=5$  &                      &         0.71  &         0.65  &         0.88  &         0.42  \\
+        & (49) & $\alpha=0.1$ & $T=10$ &                      &         0.71  &         0.65  &         0.87  &         0.42  \\
+        \hhline{~--------}
+        & (50) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(3)} & \textbf{0.75} & \textbf{0.71} &         0.86  &         0.55  \\
+        & (51) & $\alpha=0.5$ & $T=1$  &                      &         0.73  &         0.69  &         0.84  &         0.54  \\
+        & (52) & $\alpha=0.9$ & $T=1$  &                      &         0.73  &         0.70  &         0.82  & \textbf{0.58} \\
+        & (53) & $\alpha=0.1$ & $T=2$  &                      &         0.72  &         0.67  &         0.85  &         0.49  \\
+        & (54) & $\alpha=0.1$ & $T=5$  &                      & \textbf{0.75} &         0.70  & \textbf{0.87} &         0.54  \\
+        & (55) & $\alpha=0.1$ & $T=10$ &                      &         0.74  &         0.69  &         0.86  &         0.52  \\
+        \hhline{~--------}
+        & (56) & $\alpha=0.1$ & $T=1$  & \multirow{6}{*}{(8)} & \textbf{0.76} & \textbf{0.71} &         0.88  & \textbf{0.54} \\
+        & (57) & $\alpha=0.5$ & $T=1$  &                      &         0.74  &         0.70  &         0.87  &         0.52  \\
+        & (58) & $\alpha=0.9$ & $T=1$  &                      &         0.73  &         0.68  &         0.86  &         0.49  \\
+        & (59) & $\alpha=0.1$ & $T=2$  &                      &         0.74  &         0.66  & \textbf{0.94} &         0.38  \\
+        & (60) & $\alpha=0.1$ & $T=5$  &                      &         0.75  &         0.69  &         0.90  &         0.49  \\
+        & (61) & $\alpha=0.1$ & $T=10$ &                      & \textbf{0.76} &         0.69  & \textbf{0.94} &         0.44  \\
+        \hhline{~--------}
+        \multicolumn{8}{c}{} \\
+        \hhline{~--------}
+        \multirow{2}{*}{}
+        & (9)  & \multicolumn{2}{l|}{from scratch}              &                      \cellcolor{gray!25} &         0.67  &         0.61  &         0.84  &         0.38  \\
+        & (10) & \multicolumn{2}{l|}{method \cite{iodice_2022}} & \multirow{-2}{*}{N/A}\cellcolor{gray!25} & \textbf{0.78} & \textbf{0.72} & \textbf{0.92} & \textbf{0.52} \\
+        \hhline{~--------}
+    \end{tabular}
+    \caption{Results of experiments performed with pre-trained DenseNet using response-based KD. Results of reference experiments are reported at bottom for convenience.}
+    \label{tab:cxr_response_based_kd_and_transfer_learning}
+\end{table}
+
+We can observe that all experiments using DenseNet as student network achieve better results than those using \emph{SimpleCXR}.
+These experiments proved that transfer learning is really effective to improve performance on our task due to the very limited amount of data in our dataset, furthermore  the differences in architecture between the two networks likely have a strong impact on the results.
+
+None of the experiments surpass (10) in accuracy and balanced accuracy: knowledge distillation was not beneficial at all for our purpose in this case.
+The best accuracy of 0.77 is reached by (45) but with a modest specificity, instead (56) achieved a more balanced result but with a slightly lower accuracy.
+In general, it is difficult to find a clear pattern to follow in order to obtain the optimal configuration, since all the results we obtained are quite similar to each other.
+
+With our attempts we have not been able to improve state-of-the-art performance of CAC classification on CXRs.
+The task is inherently really complex and is not yet clear if it can be resolved with satisfactory results applicable for clinical diagnosis.
+From our results it looks that KD might play a role helping to improve some specific metrics, maybe combined with other approaches.

@@ -1,0 +1,104 @@
+\documentclass[a4paper,12pt,oneside,openright]{report}
+
+\usepackage{graphicx}
+\usepackage[labelformat=simple]{subcaption}
+\usepackage[colorlinks=true, linkcolor=black]{hyperref} % add hyperlinks (toc, cite, ...)
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage[hyperref=true,backref=true,backend=biber,maxbibnames=9,maxcitenames=2,style=numeric,citestyle=numeric,sorting=none]{biblatex}
+\usepackage{fancyhdr} % header/footer
+\usepackage[headheight=15pt]{geometry}
+\usepackage{amsfonts}
+\usepackage{pifont}
+\usepackage{array}
+\usepackage{hhline}
+\usepackage[table]{xcolor}
+
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{matrix,positioning,fit}
+
+\usepackage{pgfplots, pgfplotstable}
+\pgfplotsset{compat=1.13}
+\usepgfplotslibrary{statistics}
+
+\usepackage{lipsum} % generate random placeholder text...remove on final version
+
+% configure header/footer
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+
+\fancypagestyle{bibliography}{ 
+    \fancyhead{}
+    \fancyhead[RO]{\leftmark}
+}
+
+% surround with parenthesis the subfigure reference
+\renewcommand\thesubfigure{(\alph{subfigure})}
+
+% \newcommand{\alberto}[1]{\textcolor{blue}{Alberto: #1}}
+\newcommand{\alberto}[1]{}
+\newcommand{\freeze}{\ding{102}}
+
+% take images from this relative folder
+\graphicspath{{images/}}
+
+
+\makeatletter
+% take input sections from this relative folder
+\def\input@path{{sections/}}
+
+% reduce space around enumerate and itemize
+\def\@listI{\leftmargin\leftmargini
+            \parsep 4\p@ \@plus2\p@ \@minus\p@
+%            \topsep 8\p@ \@plus2\p@ \@minus4\p@
+            \topsep\z@
+            \itemsep4\p@ \@plus2\p@ \@minus\p@}
+\makeatother
+
+% configure frontpage
+\input{00-frontpage}
+
+% configure bibliography
+\addbibresource{bibliography.bib}
+
+\begin{document}
+\maketitle
+
+% \input{00-dedication}
+\newlength{\storeparskip}
+\setlength{\storeparskip}{\parskip} % Store default \parskip
+\newlength{\storeparindent}
+\setlength{\storeparindent}{\parindent} % Store default \parindent
+
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0pt}
+
+\input{00-originality}
+\input{00-abstract}
+
+\begingroup
+\setlength{\parskip}{\storeparskip}
+\setlength{\parindent}{\storeparindent}
+\tableofcontents
+% \listoffigures
+% \listoftables
+\endgroup
+
+\input{01-introduction}
+\input{02-neural_networks}
+\input{03-dataset}
+\input{04-method}
+\input{05-experiments}
+\input{06-conclusion}
+
+\clearpage
+\pagestyle{bibliography}
+\printbibliography[heading=bibintoc] % heading required to show it in ToC
+
+\end{document}

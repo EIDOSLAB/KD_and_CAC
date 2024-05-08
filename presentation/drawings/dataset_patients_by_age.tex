@@ -1,0 +1,17 @@
+\begin{tikzpicture}
+    \begin{axis}[
+        name=age_plot,height=9cm,width=9cm,
+        % title={Age distribution},
+        ybar,
+        ymin=0,ylabel={Patients},
+        xmin=0,xmax=100,xlabel={Age} 
+    ]
+        \addplot +[
+            hist={
+                bins=10,
+                data min=0,
+                data max=100
+            }   
+        ] table [y index=0] {data/age.csv};
+    \end{axis}
+\end{tikzpicture}

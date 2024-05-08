@@ -1,0 +1,7 @@
+SimpleITK
+matplotlib
+segmentation-models-pytorch
+pytorch-lightning
+imageio
+diskcache==4.1.0
+torchxrayvision

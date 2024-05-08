@@ -1,0 +1,22 @@
+\begin{tikzpicture}
+    \begin{axis}[
+        name=cac_avg_by_age,height=9cm,width=9cm,
+        ybar,
+        ymin=0,ylabel={CAC score},
+        xmin=0,xmax=100,xlabel={Age},
+        bar width=21pt,
+    ]
+        \addplot[fill=green!60!blue] coordinates {
+            (5,0)
+            (15,0)
+            (25,0)
+            (35,107)
+            (45,155)
+            (55,525)
+            (65,1234)
+            (75,1474)
+            (85,2313)
+            (95,1550)
+        };
+    \end{axis}
+\end{tikzpicture}
